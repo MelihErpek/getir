@@ -1,6 +1,6 @@
 import streamlit as st
 
-SCHEMA_PATH = st.secrets.get("SCHEMA_PATH", "GETIR_2023")
+SCHEMA_PATH = st.secrets.get("SCHEMA_PATH", "GETIR_2023.PUBLIC")
 QUALIFIED_TABLE_NAME = f"{SCHEMA_PATH}.GETIR_2023"
 TABLE_DESCRIPTION = """
 This table has various metrics for customers.
