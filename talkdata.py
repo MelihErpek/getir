@@ -3,7 +3,7 @@ import re
 import streamlit as st
 from prompts import get_system_prompt
 
-st.title("❤️ Getir - Talk To Your Competition Data")
+st.title("Getir - Talk To Your Competition Data")
 
 # Initialize the OpenAI client
 client = OpenAI(api_key=st.secrets.OPENAI_API_KEY)
