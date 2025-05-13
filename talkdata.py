@@ -27,7 +27,7 @@ for i, message in enumerate(st.session_state.messages):
         continue  # Skip the initial message with the system prompt content
     
     if message["role"] == "assistant":
-        with st.chat_message(message["role"], avatar='avatar.png'):
+        with st.chat_message(message["role"], avatar='UM_Logo_Heritage_Red.png'):
             st.write(message["content"])
             if "results" in message:
                 st.dataframe(message["results"])
@@ -39,7 +39,7 @@ for i, message in enumerate(st.session_state.messages):
 
 # If the last message is not from the assistant, generate a new response
 if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant", avatar='avatar.png'):
+    with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
         # Display a loading spinner while waiting for the response
         with st.spinner("Initiative o1-preview model is typing..."):
             response = ""
@@ -55,7 +55,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
             st.markdown(response)
 
             # Prepare the assistant message object
-            message = {"role": "assistant", "content": response, "avatar": 'avatar.png'}
+            message = {"role": "assistant", "content": response, "avatar": 'UM_Logo_Heritage_Red.png'}
 
             # Parse the response for a SQL query and execute if available
             sql_match = re.search(r"```sql\n(.*)\n```", response, re.DOTALL)
