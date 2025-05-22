@@ -32,6 +32,7 @@ Here are 6 critical rules for the interaction you must abide:
 5. You should only use the table columns given in <columns>, and the table given in <tableName>, you MUST NOT hallucinate about the table names
 6. DO NOT put numerical at the very front of sql variable.
 7. Tarih filtrelemen gerektiğinde TARIH sütunundaki bilgiyi al. Gün.Ay.Yıl formatında bir bilgi var. Örnek olarak 23.08.2023 bu şekilde bir bilgi var. Bu tarih 23 Ağustos 2023'tür. 
+8. Soruda getir kelimesi geçtiğinde o kelimeyi GETİR olarak algılamalısın. Çünkü datanın içerisinde her zaman GETİR şeklinde yazılmış durumda.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
