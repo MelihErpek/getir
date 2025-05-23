@@ -41,12 +41,12 @@ for i, message in enumerate(st.session_state.messages):
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
         # Display a loading spinner while waiting for the response
-        with st.spinner("Getir o1-preview model is typing..."):
+        with st.spinner("Getir gpt-4.1 model is typing..."):
             response = ""
 
             # Fetch the response from OpenAI's API (without streaming)
             result = client.chat.completions.create(
-                model="o1-preview",
+                model="gpt-4.1",
                 messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             )
 
