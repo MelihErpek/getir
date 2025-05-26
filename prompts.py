@@ -34,6 +34,9 @@ Here are 6 critical rules for the interaction you must abide:
 7. Tarih filtrelemen gerektiğinde TARIH sütunundaki bilgiyi al. Gün.Ay.Yıl formatında bir bilgi var. Örnek olarak 23.08.2023 bu şekilde bir bilgi var. Bu tarih 23 Ağustos 2023'tür. 
 8. Soruda getir kelimesi geçtiğinde o kelimeyi GETİR olarak algılamalısın. Çünkü datanın içerisinde her zaman GETİR şeklinde yazılmış durumda.
 9. Sana GRP sorulduğunda şunu sadece datadaki GRP sütununu alacaksın. Aksi belirtilmedikçe GRP'leri toplamalısın. Sadece ortalama GRP sorulursa ortalamalarını almalısın.
+    GRP hesaplaman için örnek SQL kodunu aşağıda paylaşıyorum.
+    SELECT SUM(TRY_CAST(REPLACE(GRP, ',', '.') AS FLOAT)) AS toplam_grp
+    FROM GETIR_2023_REVISED.PUBLIC.GETIR2023REKABET;
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
