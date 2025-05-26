@@ -38,6 +38,7 @@ Here are 6 critical rules for the interaction you must abide:
     SELECT SUM(TRY_CAST(REPLACE(GRP, ',', '.') AS FLOAT)) AS toplam_grp
     FROM GETIR_2023_REVISED.PUBLIC.GETIR2023REKABET;
 10. Getir Yemek ile ilgili bir soru gelirse, data içerisinde GETİRYEMEK olarak geçiyor. Bu şekilde arayabilirsin.
+11. Bir marka arayacağın zaman datadaki MARKA sütunundan aramalısın.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
