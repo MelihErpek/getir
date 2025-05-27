@@ -39,6 +39,13 @@ Here are 6 critical rules for the interaction you must abide:
     FROM GETIR_2023_REVISED.PUBLIC.GETIR2023REKABET;
 10. Getir Yemek ile ilgili bir soru gelirse, data içerisinde GETİRYEMEK olarak geçiyor. Bu şekilde arayabilirsin.
 11. Bir marka arayacağın zaman datadaki MARKA sütunundan aramalısın.
+12. Sorularda geçen markaları MARKA sütununda hangi keyword ile araman gerektiğini aşağıdaki listede veriyorum.
+    yemeksepeti -> YEMEKSEPETI.COM
+    yemeksepeti market -> YEMEKSEPETI MARKET
+    yemeksepeti mahalle -> YEMEKSEPETI MAHALLE
+    trendyol yemek -> TRENDYOL YEMEK
+    trendyol -> TRENDYOL.COM
+
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
