@@ -3,6 +3,33 @@ import re
 import streamlit as st
 from prompts import get_system_prompt
 
+# Kullanıcı giriş bilgileri (demo amaçlı)
+VALID_USERNAME = "admin"
+VALID_PASSWORD = "1234"
+
+def login_screen():
+    st.title("Giriş Ekranı")
+    username = st.text_input("Kullanıcı Adı")
+    password = st.text_input("Şifre", type="password")
+    login_button = st.button("Giriş Yap")
+
+    if login_button:
+        if username == VALID_USERNAME and password == VALID_PASSWORD:
+            st.session_state.authenticated = True
+            st.success("Giriş başarılı!")
+            st.experimental_rerun()
+        else:
+            st.error("Kullanıcı adı veya şifre hatalı.")
+
+# Oturum doğrulama kontrolü
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    login_screen()
+    st.stop()  # Giriş yapılmadıysa uygulamanın devamını durdur
+
+
 st.title("Getir - Talk To Your Competition Data")
 
 # Initialize the OpenAI client
