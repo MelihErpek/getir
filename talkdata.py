@@ -69,60 +69,58 @@ def _add_parsed_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def render_chart_ui(df: pd.DataFrame):
-    """Sonuç DataFrame'i için basit bir grafik arayüzü oluşturur."""
+    """Sonuç DataFrame'i için otomatik bir line chart çizer."""
     if df is None or df.empty:
         return
 
     df = df.copy()
-    df = _coerce_numeric_cols(df)
-    df = _add_parsed_date(df)
 
-    # Aday kolonlar
-    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and not c.startswith("_")]
-    time_candidates = []
-    if "_TARIH_DT" in df.columns:
-        time_candidates.append("_TARIH_DT")
-    time_candidates += [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c]) and c != "_TARIH_DT"]
-    categorical_cols = [c for c in df.columns if df[c].dtype == "object"]
+    # Türkçe sayı formatlarını düzelt
+    for c in df.columns:
+        if pd.api.types.is_numeric_dtype(df[c]):
+            continue
+        try:
+            s = df[c].astype(str).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+            df[c] = pd.to_numeric(s, errors="ignore")
+        except Exception:
+            pass
 
-    if not numeric_cols:
-        st.info("Grafik çizebilmek için sayısal bir kolon bulunamadı.")
+    # Tarih kolonu varsa dönüştür
+    if "TARIH" in df.columns:
+        df["TARIH_DT"] = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
+
+    # X ve Y eksenlerini tahmin et
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    time_or_category_cols = [c for c in df.columns if c in ["TARIH_DT", "TARIH"] or df[c].dtype == "object"]
+
+    if not numeric_cols or not time_or_category_cols:
+        st.info("Grafik çizebilmek için uygun kolonlar bulunamadı.")
         return
 
-    st.subheader("📈 Grafik oluştur")
-    x_options = time_candidates + categorical_cols
-    default_x_idx = 0 if len(x_options) > 0 else None
-    x_col = st.selectbox("X ekseni", x_options, index=default_x_idx if default_x_idx is not None else 0) if x_options else None
-    y_cols = st.multiselect("Y ekseni (1+ kolon)", numeric_cols, default=numeric_cols[:1])
+    x_col = time_or_category_cols[0]
+    y_cols = numeric_cols
 
-    chart_type = st.radio("Grafik tipi", ["Line", "Bar", "Area"], horizontal=True)
-    if not x_col or not y_cols:
-        return
-
+    # Eğer birden fazla numerik kolon varsa her biri ayrı çizgi olur
     plot_df = df[[x_col] + y_cols].dropna()
-    if plot_df.empty:
-        st.info("Seçilen alanlarda grafik oluşturmak için yeterli veri yok.")
-        return
+    melted = plot_df.melt(id_vars=[x_col], value_vars=y_cols, var_name="Seri", value_name="Değer")
 
-    melted = plot_df.melt(id_vars=[x_col], value_vars=y_cols, var_name="Series", value_name="Value")
-    x_is_time = pd.api.types.is_datetime64_any_dtype(plot_df[x_col])
+    x_type = "temporal" if "TARIH" in x_col or pd.api.types.is_datetime64_any_dtype(df[x_col]) else "nominal"
 
-    # Chart seçimi
-    if chart_type == "Line":
-        base = alt.Chart(melted).mark_line()
-    elif chart_type == "Bar":
-        base = alt.Chart(melted).mark_bar()
-    else:
-        base = alt.Chart(melted).mark_area()
+    chart = (
+        alt.Chart(melted)
+        .mark_line()
+        .encode(
+            x=alt.X(f"{x_col}:{'T' if x_type=='temporal' else 'N'}", title=x_col),
+            y=alt.Y("Değer:Q", title=", ".join(y_cols)),
+            color="Seri:N",
+            tooltip=[x_col, "Seri", "Değer"],
+        )
+        .properties(height=360)
+    )
 
-    enc = base.encode(
-        x=alt.X(x_col + (":T" if x_is_time else ":N"), title=x_col),
-        y=alt.Y("Value:Q", title=", ".join(y_cols)),
-        color=alt.Color("Series:N", legend=alt.Legend(title="Seri")),
-        tooltip=[x_col, "Series", "Value"]
-    ).properties(height=360)
+    st.subheader("📈 Line Grafik")
+    st.altair_chart(chart, use_container_width=True)
 
-    st.altair_chart(enc, use_container_width=True)
 
 # =========================
 # System Prompt (cache)
