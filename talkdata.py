@@ -1,7 +1,7 @@
 from openai import OpenAI
 import re
 import streamlit as st
-from prompts import get_system_prompt
+from prompts import get_system_prompt  # prompts.py'de bu fonksiyonun TANIMLI olduğundan emin ol
 
 # Kullanıcı giriş bilgileri (demo amaçlı)
 VALID_USERNAME = "admin"
@@ -29,11 +29,11 @@ if not st.session_state.authenticated:
     login_screen()
     st.stop()  # Giriş yapılmadıysa uygulamanın devamını durdur
 
-
 st.title("Getir - Talk To Your Competition Data")
 
 # Initialize the OpenAI client
-client = OpenAI(api_key=st.secrets.OPENAI_API_KEY)
+# (st.secrets.OPENAI_API_KEY varsa OpenAI(api_key=...) çalışır; yoksa ortam değişkenini kullanır)
+client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY", None))
 
 # Cache the system prompt result to avoid repeated computation
 if "system_prompt" not in st.session_state:
@@ -41,56 +41,57 @@ if "system_prompt" not in st.session_state:
 
 # Initialize messages if not already set in session state
 if "messages" not in st.session_state:
-    # Initialize with a single user message containing the system prompt
-    st.session_state.messages = [{"role": "user", "content": st.session_state.system_prompt}]
+    # ✅ İlk mesajı SYSTEM rolü olarak ekleyelim
+    st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
 
 # Prompt for user input and save
-if prompt := st.chat_input():
+if prompt := st.chat_input("Sorunu yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-# Display the existing chat messages, skipping the initial system prompt
-for i, message in enumerate(st.session_state.messages):
-    if i == 0 and message["content"] == st.session_state.system_prompt:
-        continue  # Skip the initial message with the system prompt content
-    
+# Display the existing chat messages (system mesajını göstermeyelim)
+for message in st.session_state.messages:
+    if message["role"] == "system":
+        continue
     if message["role"] == "assistant":
-        with st.chat_message(message["role"], avatar='UM_Logo_Heritage_Red.png'):
+        with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
             st.write(message["content"])
             if "results" in message:
                 st.dataframe(message["results"])
     else:
-        with st.chat_message(message["role"]):
+        with st.chat_message("user"):
             st.write(message["content"])
             if "results" in message:
                 st.dataframe(message["results"])
 
 # If the last message is not from the assistant, generate a new response
-if st.session_state.messages[-1]["role"] != "assistant":
+if st.session_state.messages and st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
-        # Display a loading spinner while waiting for the response
-        with st.spinner("Getir gpt-4.1 model is typing..."):
-            response = ""
-
-            # Fetch the response from OpenAI's API (without streaming)
+        with st.spinner("Model yanıt üretiyor..."):
+            # OpenAI'den yanıt al
             result = client.chat.completions.create(
                 model="gpt-4.1",
-                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+                messages=st.session_state.messages
             )
-
-            # Extract the content from the response
-            response = result.choices[0].message.content
+            response = result.choices[0].message.content or ""
             st.markdown(response)
 
-            # Prepare the assistant message object
+            # Asistan mesaj nesnesini hazırla
             message = {"role": "assistant", "content": response, "avatar": 'UM_Logo_Heritage_Red.png'}
 
-            # Parse the response for a SQL query and execute if available
-            sql_match = re.search(r"```sql\n(.*)\n```", response, re.DOTALL)
-            if sql_match:
-                sql = sql_match.group(1)
-                conn = st.connection("snowflake")
-                message["results"] = conn.query(sql)
-                st.dataframe(message["results"])
+            # ✅ SQL kod bloğunu daha sağlam bir regex ile yakala
+            # - ```sql ile başlasın
+            # - İçerik üçlü backtick'e kadar NON-GREEDY alsın
+            sql_match = re.search(r"```sql\s*(.+?)\s*```", response, re.DOTALL | re.IGNORECASE)
 
-            # Append the new assistant message to the session state
+            if sql_match:
+                sql = sql_match.group(1).strip()
+                try:
+                    conn = st.connection("snowflake")
+                    df = conn.query(sql)
+                    message["results"] = df
+                    st.dataframe(df)
+                except Exception as e:
+                    st.error(f"SQL çalıştırma hatası: {e}")
+
+            # Mesajı hafızaya ekle
             st.session_state.messages.append(message)
