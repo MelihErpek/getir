@@ -69,7 +69,7 @@ def _add_parsed_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def render_chart_ui(df: pd.DataFrame):
-    """Sonuç DataFrame'i için otomatik bir line chart çizer."""
+    """Sonuç DataFrame'i için otomatik bir line chart çizer (aylar doğru sırada)."""
     if df is None or df.empty:
         return
 
@@ -89,9 +89,19 @@ def render_chart_ui(df: pd.DataFrame):
     if "TARIH" in df.columns:
         df["TARIH_DT"] = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
 
-    # X ve Y eksenlerini tahmin et
+    # 🔹 AY sıralamasını düzelt
+    month_order = [
+        "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
+        "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"
+    ]
+    if "AYISMI" in df.columns:
+        df["AYISMI"] = df["AYISMI"].str.upper().str.strip()
+        df["AYISMI"] = pd.Categorical(df["AYISMI"], categories=month_order, ordered=True)
+        df = df.sort_values("AYISMI")
+
+    # X ve Y eksenlerini belirle
     numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-    time_or_category_cols = [c for c in df.columns if c in ["TARIH_DT", "TARIH"] or df[c].dtype == "object"]
+    time_or_category_cols = [c for c in df.columns if c in ["TARIH_DT", "TARIH", "AYISMI"] or df[c].dtype == "object"]
 
     if not numeric_cols or not time_or_category_cols:
         st.info("Grafik çizebilmek için uygun kolonlar bulunamadı.")
@@ -100,7 +110,6 @@ def render_chart_ui(df: pd.DataFrame):
     x_col = time_or_category_cols[0]
     y_cols = numeric_cols
 
-    # Eğer birden fazla numerik kolon varsa her biri ayrı çizgi olur
     plot_df = df[[x_col] + y_cols].dropna()
     melted = plot_df.melt(id_vars=[x_col], value_vars=y_cols, var_name="Seri", value_name="Değer")
 
@@ -108,7 +117,7 @@ def render_chart_ui(df: pd.DataFrame):
 
     chart = (
         alt.Chart(melted)
-        .mark_line()
+        .mark_line(point=True)
         .encode(
             x=alt.X(f"{x_col}:{'T' if x_type=='temporal' else 'N'}", title=x_col),
             y=alt.Y("Değer:Q", title=", ".join(y_cols)),
@@ -120,6 +129,7 @@ def render_chart_ui(df: pd.DataFrame):
 
     st.subheader("📈 Line Grafik")
     st.altair_chart(chart, use_container_width=True)
+
 
 
 # =========================
