@@ -1,9 +1,9 @@
 from openai import OpenAI
 import re
 import streamlit as st
-from prompts import get_system_prompt  # prompts.py'de bu fonksiyonun TANIMLI olduğundan emin ol
+from prompts import get_system_prompt
 
-# Kullanıcı giriş bilgileri (demo amaçlı)
+# Demo login bilgileri
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "1234"
 
@@ -21,34 +21,33 @@ def login_screen():
         else:
             st.error("Kullanıcı adı veya şifre hatalı.")
 
-# Oturum doğrulama kontrolü
+# Oturum doğrulama
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
     login_screen()
-    st.stop()  # Giriş yapılmadıysa uygulamanın devamını durdur
+    st.stop()
 
 st.title("Getir - Talk To Your Competition Data")
 
-# Initialize the OpenAI client
-# (st.secrets.OPENAI_API_KEY varsa OpenAI(api_key=...) çalışır; yoksa ortam değişkenini kullanır)
+# OpenAI client (önce secrets, yoksa env)
 client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY", None))
 
-# Cache the system prompt result to avoid repeated computation
+# System prompt'u cache et
 if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = get_system_prompt()
 
-# Initialize messages if not already set in session state
+# Mesajları başlat
 if "messages" not in st.session_state:
-    # ✅ İlk mesajı SYSTEM rolü olarak ekleyelim
+    # İlk mesaj SYSTEM rolünde olsun
     st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
 
-# Prompt for user input and save
+# Kullanıcı girişi
 if prompt := st.chat_input("Sorunu yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-# Display the existing chat messages (system mesajını göstermeyelim)
+# Sohbeti göster (system mesajını gizle)
 for message in st.session_state.messages:
     if message["role"] == "system":
         continue
@@ -63,26 +62,37 @@ for message in st.session_state.messages:
             if "results" in message:
                 st.dataframe(message["results"])
 
-# If the last message is not from the assistant, generate a new response
+# Asistan sırası ise yanıt üret
 if st.session_state.messages and st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
         with st.spinner("Model yanıt üretiyor..."):
-            # OpenAI'den yanıt al
+
+            # ✅ API'ye gidecek temiz mesaj listesi (yalnız role+content)
+            api_messages = []
+            for m in st.session_state.messages:
+                role = m.get("role")
+                content = m.get("content")
+                if role in ("system", "user", "assistant"):
+                    if isinstance(content, str):
+                        api_messages.append({"role": role, "content": content})
+                    elif content is not None:
+                        api_messages.append({"role": role, "content": str(content)})
+
+            # OpenAI çağrısı
             result = client.chat.completions.create(
                 model="gpt-4.1",
-                messages=st.session_state.messages
+                messages=api_messages
             )
+
             response = result.choices[0].message.content or ""
             st.markdown(response)
 
-            # Asistan mesaj nesnesini hazırla
+            # Asistan mesajını state'e eklemek için hazırla
             message = {"role": "assistant", "content": response, "avatar": 'UM_Logo_Heritage_Red.png'}
 
-            # ✅ SQL kod bloğunu daha sağlam bir regex ile yakala
-            # - ```sql ile başlasın
-            # - İçerik üçlü backtick'e kadar NON-GREEDY alsın
+            # ✅ SQL kod bloğunu yakala ve Snowflake'te çalıştır
+            # - ```sql ile başlasın, kapanana kadar NON-GREEDY alsın
             sql_match = re.search(r"```sql\s*(.+?)\s*```", response, re.DOTALL | re.IGNORECASE)
-
             if sql_match:
                 sql = sql_match.group(1).strip()
                 try:
