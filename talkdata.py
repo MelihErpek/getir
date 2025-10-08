@@ -265,7 +265,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                     st.dataframe(df)
 
                     # Sonuçtan grafik çizdir
-                    render_chart_ui(df)
+                    render_line_chart(df)
 
                 except Exception as e:
                     st.error(f"SQL çalıştırma hatası: {e}")
