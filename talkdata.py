@@ -1,9 +1,13 @@
 from openai import OpenAI
 import re
+import pandas as pd
+import altair as alt
 import streamlit as st
-from prompts import get_system_prompt
+from prompts import get_system_prompt  # prompts.py içinde bu fonksiyon TANIMLI olmalı
 
-# Demo login bilgileri
+# =========================
+# Basit Login (demo amaçlı)
+# =========================
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "1234"
 
@@ -27,27 +31,121 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state.authenticated:
     login_screen()
-    st.stop()
+    st.stop()  # Giriş yapılmadıysa uygulamayı durdur
 
+# =========================
+# Başlık
+# =========================
 st.title("Getir - Talk To Your Competition Data")
 
-# OpenAI client (önce secrets, yoksa env)
+# =========================
+# OpenAI Client
+# =========================
+# Önce st.secrets, yoksa OpenAI default env değişkenini kullanır
 client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY", None))
 
-# System prompt'u cache et
+# =========================
+# Yardımcı: Sayı & Tarih dönüştürme + Grafik UI
+# =========================
+def _coerce_numeric_cols(df: pd.DataFrame) -> pd.DataFrame:
+    """Türkçe sayı formatlarını (binlik nokta, ondalık virgül) numeric'e çevirir."""
+    for c in df.columns:
+        s = df[c]
+        if pd.api.types.is_numeric_dtype(s):
+            continue
+        try:
+            # string'e çevirip . (binlik) sil, , (ondalık) -> .
+            s2 = s.astype(str).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+            df[c] = pd.to_numeric(s2, errors="ignore")
+        except Exception:
+            pass
+    return df
+
+def _add_parsed_date(df: pd.DataFrame) -> pd.DataFrame:
+    """TARIH kolonunu DD.MM.YYYY formatından datetime'a çevirip yardımcı kolon ekler."""
+    if "TARIH" in df.columns:
+        dt = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
+        df["_TARIH_DT"] = dt
+    return df
+
+def render_chart_ui(df: pd.DataFrame):
+    """Sonuç DataFrame'i için basit bir grafik arayüzü oluşturur."""
+    if df is None or df.empty:
+        return
+
+    df = df.copy()
+    df = _coerce_numeric_cols(df)
+    df = _add_parsed_date(df)
+
+    # Aday kolonlar
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and not c.startswith("_")]
+    time_candidates = []
+    if "_TARIH_DT" in df.columns:
+        time_candidates.append("_TARIH_DT")
+    time_candidates += [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c]) and c != "_TARIH_DT"]
+    categorical_cols = [c for c in df.columns if df[c].dtype == "object"]
+
+    if not numeric_cols:
+        st.info("Grafik çizebilmek için sayısal bir kolon bulunamadı.")
+        return
+
+    st.subheader("📈 Grafik oluştur")
+    x_options = time_candidates + categorical_cols
+    default_x_idx = 0 if len(x_options) > 0 else None
+    x_col = st.selectbox("X ekseni", x_options, index=default_x_idx if default_x_idx is not None else 0) if x_options else None
+    y_cols = st.multiselect("Y ekseni (1+ kolon)", numeric_cols, default=numeric_cols[:1])
+
+    chart_type = st.radio("Grafik tipi", ["Line", "Bar", "Area"], horizontal=True)
+    if not x_col or not y_cols:
+        return
+
+    plot_df = df[[x_col] + y_cols].dropna()
+    if plot_df.empty:
+        st.info("Seçilen alanlarda grafik oluşturmak için yeterli veri yok.")
+        return
+
+    melted = plot_df.melt(id_vars=[x_col], value_vars=y_cols, var_name="Series", value_name="Value")
+    x_is_time = pd.api.types.is_datetime64_any_dtype(plot_df[x_col])
+
+    # Chart seçimi
+    if chart_type == "Line":
+        base = alt.Chart(melted).mark_line()
+    elif chart_type == "Bar":
+        base = alt.Chart(melted).mark_bar()
+    else:
+        base = alt.Chart(melted).mark_area()
+
+    enc = base.encode(
+        x=alt.X(x_col + (":T" if x_is_time else ":N"), title=x_col),
+        y=alt.Y("Value:Q", title=", ".join(y_cols)),
+        color=alt.Color("Series:N", legend=alt.Legend(title="Seri")),
+        tooltip=[x_col, "Series", "Value"]
+    ).properties(height=360)
+
+    st.altair_chart(enc, use_container_width=True)
+
+# =========================
+# System Prompt (cache)
+# =========================
 if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = get_system_prompt()
 
-# Mesajları başlat
+# =========================
+# Mesaj State
+# =========================
 if "messages" not in st.session_state:
-    # İlk mesaj SYSTEM rolünde olsun
+    # İlk mesaj SYSTEM rolünde (prompt)
     st.session_state.messages = [{"role": "system", "content": st.session_state.system_prompt}]
 
-# Kullanıcı girişi
+# =========================
+# Kullanıcı Girişi
+# =========================
 if prompt := st.chat_input("Sorunu yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-# Sohbeti göster (system mesajını gizle)
+# =========================
+# Mevcut Sohbeti Göster (system hariç)
+# =========================
 for message in st.session_state.messages:
     if message["role"] == "system":
         continue
@@ -62,12 +160,14 @@ for message in st.session_state.messages:
             if "results" in message:
                 st.dataframe(message["results"])
 
-# Asistan sırası ise yanıt üret
+# =========================
+# Yanıt Üretme (asistan sırasıysa)
+# =========================
 if st.session_state.messages and st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
         with st.spinner("Model yanıt üretiyor..."):
 
-            # ✅ API'ye gidecek temiz mesaj listesi (yalnız role+content)
+            # API'ye gidecek temiz mesaj listesi (yalnız role + content)
             api_messages = []
             for m in st.session_state.messages:
                 role = m.get("role")
@@ -90,8 +190,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
             # Asistan mesajını state'e eklemek için hazırla
             message = {"role": "assistant", "content": response, "avatar": 'UM_Logo_Heritage_Red.png'}
 
-            # ✅ SQL kod bloğunu yakala ve Snowflake'te çalıştır
-            # - ```sql ile başlasın, kapanana kadar NON-GREEDY alsın
+            # SQL kod bloğunu yakala ve Snowflake'te çalıştır
             sql_match = re.search(r"```sql\s*(.+?)\s*```", response, re.DOTALL | re.IGNORECASE)
             if sql_match:
                 sql = sql_match.group(1).strip()
@@ -100,6 +199,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                     df = conn.query(sql)
                     message["results"] = df
                     st.dataframe(df)
+
+                    # Sonuçtan grafik çizdir
+                    render_chart_ui(df)
+
                 except Exception as e:
                     st.error(f"SQL çalıştırma hatası: {e}")
 
