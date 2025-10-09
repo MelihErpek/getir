@@ -146,7 +146,7 @@ def render_line_chart(df: pd.DataFrame):
         # fallback: ilk object kolon
         obj_cols = [c for c in df.columns if df[c].dtype == "object"]
         if not obj_cols:
-            st.info("Grafik çizebilmek için uygun X ekseni bulunamadı.")
+            # st.info("Grafik çizebilmek için uygun X ekseni bulunamadı.")
             return
         x_col = obj_cols[0]
         x_is_time = False
@@ -155,7 +155,7 @@ def render_line_chart(df: pd.DataFrame):
     # Y ekseni: tüm sayısal sütunlar (mantıklı olanları bırakmak istersen burada filtreleyebilirsin)
     y_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
     if not y_cols:
-        st.info("Grafik çizebilmek için sayısal kolon bulunamadı.")
+        # st.info("Grafik çizebilmek için sayısal kolon bulunamadı.")
         return
 
     plot_df = df[[x_col] + y_cols].dropna()
