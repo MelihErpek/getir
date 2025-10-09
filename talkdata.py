@@ -183,7 +183,6 @@ def render_line_chart(df: pd.DataFrame):
         .properties(height=360)
     )
 
-    st.subheader("📈 Line Grafik")
     st.altair_chart(chart, use_container_width=True)
 
 
