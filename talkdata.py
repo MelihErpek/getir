@@ -263,27 +263,27 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
             if sql_match:
                 sql = sql_match.group(1).strip()
                 try:
-    conn = st.connection("snowflake")
-    df = conn.query(sql)
-
-    # --- AYISMI'na göre takvim sırası (tablo için) ---
-    month_order = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN",
-                   "TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
-
-    if "AYISMI" in df.columns:
-        df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
-        df["AYISMI"] = pd.Categorical(df["AYISMI"], categories=month_order, ordered=True)
-        sort_cols = ["YIL","AYISMI"] if "YIL" in df.columns else ["AYISMI"]
-        df = df.sort_values(sort_cols)
-
-    message["results"] = df
-    st.dataframe(df)
-
-    # grafik tarafı zaten ay sırasını doğru çiziyor
-    render_line_chart(df)
-
-except Exception as e:
-    st.error(f"SQL çalıştırma hatası: {e}")
+                    conn = st.connection("snowflake")
+                    df = conn.query(sql)
+                
+                    # --- AYISMI'na göre takvim sırası (tablo için) ---
+                    month_order = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN",
+                                   "TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
+                
+                    if "AYISMI" in df.columns:
+                        df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
+                        df["AYISMI"] = pd.Categorical(df["AYISMI"], categories=month_order, ordered=True)
+                        sort_cols = ["YIL","AYISMI"] if "YIL" in df.columns else ["AYISMI"]
+                        df = df.sort_values(sort_cols)
+                
+                    message["results"] = df
+                    st.dataframe(df)
+                
+                    # grafik tarafı zaten ay sırasını doğru çiziyor
+                    render_line_chart(df)
+                
+                except Exception as e:
+                st.error(f"SQL çalıştırma hatası: {e}")
 
 
             # Mesajı hafızaya ekle
