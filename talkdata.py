@@ -81,12 +81,16 @@ def format_thousands_tr(x, decimals=0):
     return s
 
 def dataframe_to_tr_strings(df: pd.DataFrame, decimals=0) -> pd.DataFrame:
-    """Sayısal kolonları '10.000.000' metnine çevirir (sadece görüntü için)."""
-    out = df.copy()
+    """Önce metin sayılarını sayıya çevirir, sonra 10.000.000 biçiminde string'e formatlar."""
+    # string sayı -> numeric (virgül/nokta uyarlaması)
+    df_num = _coerce_numeric_cols(df.copy())
+
+    out = df_num.copy()
     for c in out.columns:
         if pd.api.types.is_numeric_dtype(out[c]):
             out[c] = out[c].apply(lambda v: format_thousands_tr(v, decimals))
     return out
+
 # ---------------------------------------------------------------------
 
 def render_line_chart(df: pd.DataFrame):
