@@ -283,7 +283,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                     render_line_chart(df)
                 
                 except Exception as e:
-                st.error(f"SQL çalıştırma hatası: {e}")
+                    st.error(f"SQL çalıştırma hatası: {e}")
 
 
             # Mesajı hafızaya ekle
