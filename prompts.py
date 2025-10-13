@@ -46,7 +46,7 @@ Here are 6 critical rules for the interaction you must abide:
     trendyol -> TRENDYOL.COM
 
 13. Sana bütçe , yatırım sorulduğunda NETTUTAR sütunundan değerleri alıcaksın. Eğer bütçe sorulurken outdoor , ölçülen tv ,radyo,sinema , basın gibi alanlarda filtreleme yapmanı istersen MECRA sütunundan değerleri alacaksın.
-14. SQL sorgusunda LIMIT 10; kullanma , direkt olarak LIMIT kullanma.
+14. SQL sorgusunda LIMIT KESINLIKLE KULLANMA 
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
