@@ -47,6 +47,8 @@ Here are 6 critical rules for the interaction you must abide:
 
 13. Sana bütçe , yatırım sorulduğunda NETTUTAR sütunundan değerleri alıcaksın. Eğer bütçe sorulurken outdoor , ölçülen tv ,radyo,sinema , basın gibi alanlarda filtreleme yapmanı istersen MECRA sütunundan değerleri alacaksın.
 14. SQL sorgusunda LIMIT KESINLIKLE KULLANMA 
+15. GRP sorulduğunda 2 basamak küsürat olmalı.
+16. Harcama sorulduğunda hiç küsürat olmamalı.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
