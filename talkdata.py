@@ -69,121 +69,126 @@ def _add_parsed_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def render_line_chart(df: pd.DataFrame):
-    """Sonuç DataFrame'i için otomatik bir line chart çizer (aylar doğru sırada, sayılar doğru parse)."""
+    """Varsa AYISMI+YIL+harcama kolonu ile 'her yıl bir line' grafiği; yoksa genel fallback."""
     if df is None or df.empty:
         return
-
     df = df.copy()
 
-    # --- Sayı parse: '72,286,612.7266' -> en-US; '2.603,43' -> eu
+    # --- sayı parse (virgül/nokta)
     def smart_to_numeric(s: pd.Series) -> pd.Series:
         if pd.api.types.is_numeric_dtype(s):
             return s
         s = s.astype(str).str.strip()
-
-        # iki işaret birden varsa (virgül + nokta)
         mask_both = s.str.contains(",", na=False) & s.str.contains(r"\.", regex=True, na=False)
-        # en-US: 12,345,678.90 -> virgülleri sil, nokta kalsın
         s.loc[mask_both] = s.loc[mask_both].str.replace(",", "", regex=False)
-
-        # sadece virgül varsa -> 12.345,67 veya 123,45 (ondalık virgül)
         mask_only_comma = s.str.contains(",", na=False) & ~s.str.contains(r"\.", regex=True, na=False)
         s.loc[mask_only_comma] = (
             s.loc[mask_only_comma]
-            .str.replace(".", "", regex=False)  # varsa binlik nokta
-            .str.replace(",", ".", regex=False)  # ondalık virgül -> nokta
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
         )
-
-        # sadece nokta varsa: zaten en-US ondalık, dokunma
-        # diğer durumlar numeric değilse NaN kalır
         return pd.to_numeric(s, errors="ignore")
 
     for c in df.columns:
-        try:
-            df[c] = smart_to_numeric(df[c])
-        except Exception:
-            pass
+        try: df[c] = smart_to_numeric(df[c])
+        except Exception: pass
 
-    # --- Tarih parse (varsa)
-    if "TARIH" in df.columns:
-        df["TARIH_DT"] = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
+    # --- hedef kolonları otomatik tespit
+    # X ekseni (ay)
+    if "AYISMI" not in df.columns:
+        # isim biraz farklıysa (AY, AY_ADI vs.) burada genişletebilirsin
+        # fallback: devamı eski mantığa bırak
+        pass
+    else:
+        # değer (harcama) kolonu: TOPLAM_HARCAMA öncelikli; yoksa adı HARCAMA/TUTAR/TOPLAM içeren 1. sayısal kolon
+        value_col = None
+        pref = [c for c in df.columns if c.upper() == "TOPLAM_HARCAMA"]
+        if pref:
+            value_col = pref[0]
+        else:
+            cand = [
+                c for c in df.columns
+                if (("HARCAMA" in c.upper()) or ("TUTAR" in c.upper()) or ("TOPLAM" in c.upper()))
+                and pd.api.types.is_numeric_dtype(df[c])
+            ]
+            if cand: value_col = cand[0]
 
-    # --- Ay sıralaması
-    month_order_tr = [
-        "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
-        "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"
-    ]
-    # aksansız varyant da olabiliyor (OZEL -> OZEL)
-    month_order_no_diac = [
-        "OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN",
-        "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK"
-    ]
+        # yıl kolonu: YIL/YEAR veya 4 haneli sayı gibi olan bir kolon
+        year_col = None
+        if "YIL" in df.columns: year_col = "YIL"
+        elif "YEAR" in df.columns: year_col = "YEAR"
+        else:
+            for c in df.columns:
+                if pd.api.types.is_integer_dtype(df[c]) or pd.api.types.is_string_dtype(df[c]):
+                    s = df[c].astype(str).str.fullmatch(r"\d{4}")
+                    if s.notna().any() and s.sum() >= max(1, len(df) * 0.3):
+                        year_col = c; break
 
-    # X ekseni seçimi: AYISMI varsa onu kullan; yoksa TARIH_DT; yoksa ilk object kolon
+        # Eğer üçü de varsa: otomatik çoklu yıl çizimi
+        if value_col and year_col and "AYISMI" in df.columns:
+            # ay sırası
+            month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
+            month_order_no_diac = ["OCAK","SUBAT","MART","NISAN","MAYIS","HAZIRAN","TEMMUZ","AGUSTOS","EYLUL","EKIM","KASIM","ARALIK"]
+
+            df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
+            x_sort = month_order_tr if set(df["AYISMI"].unique()).issubset(set(month_order_tr)) else month_order_no_diac
+
+            # yıl legend düzgün görünsün diye stringe çevir
+            df[year_col] = df[year_col].astype(str)
+
+            chart = (
+                alt.Chart(df)
+                .mark_line(point=True)
+                .encode(
+                    x=alt.X("AYISMI:N", sort=x_sort, title="Ay"),
+                    y=alt.Y(f"{value_col}:Q", title=value_col.replace("_", " ")),
+                    color=alt.Color(f"{year_col}:N", title="Yıl"),
+                    tooltip=[year_col, "AYISMI", value_col]
+                )
+                .properties(height=360)
+            )
+            st.altair_chart(chart, use_container_width=True)
+            return
+
+    # --- burada değilse: genel fallback (YIL'ı Y ekseninden hariç tut)
+    # X: AYISMI/TARIH_DT/ilk object; Y: sayısal kolonlar fakat yıl benzeri kolonlar hariç
+    x_col, x_is_time, x_sort = None, False, None
     if "AYISMI" in df.columns:
         df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
-        # iki farklı kategori listesi dene
-        if set(df["AYISMI"].unique()).issubset(set(month_order_tr)):
-            cat = pd.Categorical(df["AYISMI"], categories=month_order_tr, ordered=True)
-            df["AYISMI"] = cat
-            df = df.sort_values("AYISMI")
-            x_col = "AYISMI"
-            x_is_time = False
-            x_sort = month_order_tr  # Altair için açık sort
-        else:
-            cat = pd.Categorical(df["AYISMI"], categories=month_order_no_diac, ordered=True)
-            df["AYISMI"] = cat
-            df = df.sort_values("AYISMI")
-            x_col = "AYISMI"
-            x_is_time = False
-            x_sort = month_order_no_diac
-    elif "TARIH_DT" in df.columns:
-        x_col = "TARIH_DT"
-        x_is_time = True
-        x_sort = None
-        df = df.sort_values(x_col)
+        month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
+        month_order_no_diac = ["OCAK","SUBAT","MART","NISAN","MAYIS","HAZIRAN","TEMMUZ","AGUSTOS","EYLUL","EKIM","KASIM","ARALIK"]
+        x_sort = month_order_tr if set(df["AYISMI"].unique()).issubset(set(month_order_tr)) else month_order_no_diac
+        x_col = "AYISMI"
+    elif "TARIH" in df.columns:
+        df["TARIH_DT"] = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
+        x_col, x_is_time = "TARIH_DT", True
     else:
-        # fallback: ilk object kolon
         obj_cols = [c for c in df.columns if df[c].dtype == "object"]
-        if not obj_cols:
-            # st.info("Grafik çizebilmek için uygun X ekseni bulunamadı.")
-            return
+        if not obj_cols: return
         x_col = obj_cols[0]
-        x_is_time = False
-        x_sort = None
 
-    # Y ekseni: tüm sayısal sütunlar (mantıklı olanları bırakmak istersen burada filtreleyebilirsin)
-    y_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-    if not y_cols:
-        # st.info("Grafik çizebilmek için sayısal kolon bulunamadı.")
-        return
+    # yıl olabilecek kolonlar (YIL/YEAR/4 haneli) -> Y eksenine dahil ETME
+    def is_year_like(col):
+        if col.upper() in ("YIL","YEAR"): return True
+        if pd.api.types.is_integer_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+            s = df[col].astype(str).str.fullmatch(r"\d{4}")
+            return s.notna().any() and s.sum() >= max(1, len(df) * 0.3)
+        return False
 
-    plot_df = df[[x_col] + y_cols].dropna()
-    if plot_df.empty:
-        st.info("Seçilen alanlarda grafik oluşturmak için yeterli veri yok.")
-        return
+    y_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and not is_year_like(c)]
+    if not y_cols: return
 
-    melted = plot_df.melt(id_vars=[x_col], value_vars=y_cols, var_name="Seri", value_name="Değer")
-
-    x_enc = alt.X(
-        f"{x_col}:{'T' if x_is_time else 'N'}",
-        title=x_col,
-        sort=x_sort if x_sort else None  # 🔑 Ay sırası burada dayatılıyor
-    )
-
+    melted = df[[x_col] + y_cols].dropna().melt(id_vars=[x_col], value_vars=y_cols,
+                                                var_name="Seri", value_name="Değer")
+    x_enc = alt.X(f"{x_col}:{'T' if x_is_time else 'N'}", title=x_col, sort=x_sort if x_sort else None)
     chart = (
-        alt.Chart(melted)
-        .mark_line(point=True)
-        .encode(
-            x=x_enc,
-            y=alt.Y("Değer:Q", title=", ".join(y_cols)),
-            color=alt.Color("Seri:N", legend=alt.Legend(title="Seri")),
-            tooltip=[x_col, "Seri", "Değer"],
-        )
+        alt.Chart(melted).mark_line(point=True)
+        .encode(x=x_enc, y=alt.Y("Değer:Q"), color=alt.Color("Seri:N", title="Seri"),
+                tooltip=[x_col, "Seri", "Değer"])
         .properties(height=360)
     )
-
     st.altair_chart(chart, use_container_width=True)
+
 
 
 
