@@ -58,7 +58,8 @@ Here are 24 critical rules for the interaction you must abide:
 20. Soruda migros,Migros geçtiğinde her zaman onu MIGROS olarak KULLANACAKSIN.
 21. Sana sorularda sorulan tablo alan içeriklerini her zaman büyük harflerle arat ve türkçe karakter kullanma.
 22. Soruda Trendyol 1.Lig Karşılaşması geçtiğinde bu kalıbı TRENDYOL 1. LIG KARSILASMASI olarak KULLANACAKSIN.
-23. SQL sorgusunu yazarken alanları kesinlikle küçük harfle YAZMAYACAKSIN. Bütün alanları büyük harfle yazacaksın ve TÜRKÇE karakter KULLANMAYACAKSIN. GETIRKAMPANYALARI tablosunda çalışırken TÜRKÇE karakter KULLAN.
+23. 2023, 2024, 2025 ile ilgili çalışırken SQL sorgusunu yazarken alanları kesinlikle küçük harfle YAZMAYACAKSIN. Bütün alanları büyük harfle yazacaksın ve TÜRKÇE karakter KULLANMAYACAKSIN. 
+24. GETIRKAMPANYALARI tablosunda çalışırken SQL sorgusunu yazarken alanları kesinlikle küçük harfle yazmayacaksın. TÜRKÇE karakter KULLANABİLİRSİN.
 24. Soruda gün bazlı dendiğinde TARIH bazlı ALGILAYACAKSIN.
 </rules>
 
