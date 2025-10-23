@@ -45,6 +45,7 @@ Here are 6 critical rules for the interaction you must abide:
     yemeksepeti mahalle -> YEMEKSEPETI MAHALLE
     trendyol yemek -> TRENDYOL YEMEK
     trendyol -> TRENDYOL.COM
+    migros-> MIGROS
 
 13. Sana bütçe , yatırım sorulduğunda NETTUTAR sütunundan değerleri alıcaksın. Eğer bütçe sorulurken outdoor , ölçülen tv ,radyo,sinema , basın gibi alanlarda filtreleme yapmanı istersen MECRA sütunundan değerleri alacaksın.
 14. SQL sorgusunda LIMIT KESINLIKLE KULLANMA 
