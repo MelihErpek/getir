@@ -63,6 +63,7 @@ Here are  critical rules for the interaction you must abide:
 24. Soruda gün bazlı dendiğinde TARIH bazlı ALGILAYACAKSIN.
 25. GETIRKAMPANYALARI tablosundaki REACH1 VE REACH3 alanları örnek olarak %42 , %55 gibi olduğu için SQL sorgunu buna göre yaz. Direkt olarak bu değerleri göster.
 26. GETIRKAMPANYALARI tablosunda çalışırken SQL sorgunda verilen plan adını direkt olarak al.
+27. SOV yani Share Of Voice hesaplarken ilgili markanın o yılki toplam GRP'si üzerinden hesaplamalısın. Örnek : İlgili markanın Ocak GRP'si / İlgili markanın Toplam GRP'Sİ
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
