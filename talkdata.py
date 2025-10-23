@@ -69,125 +69,84 @@ def _add_parsed_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def render_line_chart(df: pd.DataFrame):
-    """Varsa AYISMI+YIL+harcama kolonu ile 'her yıl bir line' grafiği; yoksa genel fallback."""
     if df is None or df.empty:
         return
     df = df.copy()
 
-    # --- sayı parse (virgül/nokta)
-    def smart_to_numeric(s: pd.Series) -> pd.Series:
-        if pd.api.types.is_numeric_dtype(s):
-            return s
-        s = s.astype(str).str.strip()
-        mask_both = s.str.contains(",", na=False) & s.str.contains(r"\.", regex=True, na=False)
-        s.loc[mask_both] = s.loc[mask_both].str.replace(",", "", regex=False)
-        mask_only_comma = s.str.contains(",", na=False) & ~s.str.contains(r"\.", regex=True, na=False)
-        s.loc[mask_only_comma] = (
-            s.loc[mask_only_comma]
-            .str.replace(".", "", regex=False)
-            .str.replace(",", ".", regex=False)
+    # --- (1) Sayı parse aynen kalabilir ---
+
+    # --- (2) AYISMI normalizasyonu ve temizlik ---
+    month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN",
+                      "TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
+
+    if "AYISMI" in df.columns:
+        # NaN'ları at, trim + TR upper
+        df = df[df["AYISMI"].notna()]
+        df["AYISMI"] = (
+            df["AYISMI"].astype(str).str.strip().str.upper()
         )
-        return pd.to_numeric(s, errors="ignore")
+        # Sadece geçerli ay adlarını bırak
+        df = df[df["AYISMI"].isin(month_order_tr)]
 
-    for c in df.columns:
-        try: df[c] = smart_to_numeric(df[c])
-        except Exception: pass
+    # --- hedef kolonları tespit ---
+    # (değer ve yıl kolonlarını bulma mantığınız aynen kalabilir)
 
-    # --- hedef kolonları otomatik tespit
-    # X ekseni (ay)
-    if "AYISMI" not in df.columns:
-        # isim biraz farklıysa (AY, AY_ADI vs.) burada genişletebilirsin
-        # fallback: devamı eski mantığa bırak
-        pass
-    else:
-        # değer (harcama) kolonu: TOPLAM_HARCAMA öncelikli; yoksa adı HARCAMA/TUTAR/TOPLAM içeren 1. sayısal kolon
-        value_col = None
-        pref = [c for c in df.columns if c.upper() == "TOPLAM_HARCAMA"]
-        if pref:
-            value_col = pref[0]
-        else:
-            cand = [
-                c for c in df.columns
-                if (("HARCAMA" in c.upper()) or ("TUTAR" in c.upper()) or ("TOPLAM" in c.upper()))
-                and pd.api.types.is_numeric_dtype(df[c])
-            ]
-            if cand: value_col = cand[0]
+    # ... value_col, year_col tespiti (sizin kodunuzdaki gibi) ...
 
-        # yıl kolonu: YIL/YEAR veya 4 haneli sayı gibi olan bir kolon
-        year_col = None
-        if "YIL" in df.columns: year_col = "YIL"
-        elif "YEAR" in df.columns: year_col = "YEAR"
-        else:
-            for c in df.columns:
-                if pd.api.types.is_integer_dtype(df[c]) or pd.api.types.is_string_dtype(df[c]):
-                    s = df[c].astype(str).str.fullmatch(r"\d{4}")
-                    if s.notna().any() and s.sum() >= max(1, len(df) * 0.3):
-                        year_col = c; break
-
-        # Eğer üçü de varsa: otomatik çoklu yıl çizimi
-        if value_col and year_col and "AYISMI" in df.columns:
-            # ay sırası
-            month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
-            month_order_no_diac = ["OCAK","SUBAT","MART","NISAN","MAYIS","HAZIRAN","TEMMUZ","AGUSTOS","EYLUL","EKIM","KASIM","ARALIK"]
-
-            df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
-            x_sort = month_order_tr if set(df["AYISMI"].unique()).issubset(set(month_order_tr)) else month_order_no_diac
-
-            # yıl legend düzgün görünsün diye stringe çevir
+    if ("AYISMI" in df.columns) and value_col:
+        # Çoklu yıl varsa
+        if year_col:
             df[year_col] = df[year_col].astype(str)
-
             chart = (
                 alt.Chart(df)
                 .mark_line(point=True)
                 .encode(
-                    x=alt.X("AYISMI:N", sort=x_sort, title="Ay"),
+                    x=alt.X(
+                        "AYISMI:N",
+                        title="Ay",
+                        # kritik nokta: özel sıra DOMAIN olarak veriliyor
+                        scale=alt.Scale(domain=month_order_tr),
+                    ),
                     y=alt.Y(f"{value_col}:Q", title=value_col.replace("_", " ")),
                     color=alt.Color(f"{year_col}:N", title="Yıl"),
-                    tooltip=[year_col, "AYISMI", value_col]
+                    tooltip=[year_col, "AYISMI", value_col],
                 )
                 .properties(height=360)
             )
             st.altair_chart(chart, use_container_width=True)
             return
 
-    # --- burada değilse: genel fallback (YIL'ı Y ekseninden hariç tut)
-    # X: AYISMI/TARIH_DT/ilk object; Y: sayısal kolonlar fakat yıl benzeri kolonlar hariç
-    x_col, x_is_time, x_sort = None, False, None
+    # --- Fallback çizimi ---
     if "AYISMI" in df.columns:
-        df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
-        month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN","TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
-        month_order_no_diac = ["OCAK","SUBAT","MART","NISAN","MAYIS","HAZIRAN","TEMMUZ","AGUSTOS","EYLUL","EKIM","KASIM","ARALIK"]
-        x_sort = month_order_tr if set(df["AYISMI"].unique()).issubset(set(month_order_tr)) else month_order_no_diac
-        x_col = "AYISMI"
+        x_enc = alt.X(
+            "AYISMI:N",
+            title="AYISMI",
+            scale=alt.Scale(domain=month_order_tr)  # yine domain ile sabit sıra
+        )
     elif "TARIH" in df.columns:
         df["TARIH_DT"] = pd.to_datetime(df["TARIH"], format="%d.%m.%Y", errors="coerce")
-        x_col, x_is_time = "TARIH_DT", True
+        x_enc = alt.X("TARIH_DT:T", title="TARIH")
     else:
         obj_cols = [c for c in df.columns if df[c].dtype == "object"]
-        if not obj_cols: return
-        x_col = obj_cols[0]
+        if not obj_cols:
+            return
+        x_enc = alt.X(f"{obj_cols[0]}:N", title=obj_cols[0])
 
-    # yıl olabilecek kolonlar (YIL/YEAR/4 haneli) -> Y eksenine dahil ETME
-    def is_year_like(col):
-        if col.upper() in ("YIL","YEAR"): return True
-        if pd.api.types.is_integer_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
-            s = df[col].astype(str).str.fullmatch(r"\d{4}")
-            return s.notna().any() and s.sum() >= max(1, len(df) * 0.3)
-        return False
+    # yıl benzeri kolonları hariç tutup eritme vs. aynen:
+    y_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and c not in ("YIL","YEAR")]
+    if not y_cols:
+        return
 
-    y_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and not is_year_like(c)]
-    if not y_cols: return
-
-    melted = df[[x_col] + y_cols].dropna().melt(id_vars=[x_col], value_vars=y_cols,
-                                                var_name="Seri", value_name="Değer")
-    x_enc = alt.X(f"{x_col}:{'T' if x_is_time else 'N'}", title=x_col, sort=x_sort if x_sort else None)
+    melted = df[["AYISMI"] + y_cols].melt(id_vars=["AYISMI"], var_name="Seri", value_name="Değer")
     chart = (
-        alt.Chart(melted).mark_line(point=True)
+        alt.Chart(melted)
+        .mark_line(point=True)
         .encode(x=x_enc, y=alt.Y("Değer:Q"), color=alt.Color("Seri:N", title="Seri"),
-                tooltip=[x_col, "Seri", "Değer"])
+                tooltip=["AYISMI", "Seri", "Değer"])
         .properties(height=360)
     )
     st.altair_chart(chart, use_container_width=True)
+
 
 
 
