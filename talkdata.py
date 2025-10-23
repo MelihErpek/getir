@@ -240,7 +240,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
 
             # OpenAI çağrısı
             result = client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4.1",
                 messages=api_messages
             )
             response = result.choices[0].message.content or ""
