@@ -4,7 +4,29 @@ import re
 import pandas as pd
 import altair as alt
 import streamlit as st
-from prompts import get_system_prompt  # prompts.py içinde tanımlı
+from prompts import get_system_prompt  # prompts.py içinde tanımlı olmalı
+
+# =========================
+# Altair/Vega: Türkçe sayı & tarih yereli
+# =========================
+alt.renderers.set_embed_options(
+    formatLocale={
+        "decimal": ",",
+        "thousands": ".",
+        "grouping": [3],
+        "currency": ["", " ₺"],   # D3'te format="$,.0f" yazınca bu kullanılır
+    },
+    timeFormatLocale={
+        "dateTime": "%A, %e %B %Y %X",
+        "date": "%d.%m.%Y",
+        "time": "%H:%M:%S",
+        "periods": ["ÖÖ", "ÖS"],
+        "days": ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+        "shortDays": ["Paz","Pts","Sal","Çar","Per","Cum","Cts"],
+        "months": ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
+        "shortMonths": ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+    },
+)
 
 # =========================
 # Basit Login (demo)
@@ -52,8 +74,10 @@ def smart_to_numeric(s: pd.Series) -> pd.Series:
     if pd.api.types.is_numeric_dtype(s):
         return s
     s = s.astype(str).str.strip()
+    # "1.234,56" -> "1234,56"
     mask_both = s.str.contains(",", na=False) & s.str.contains(r"\.", regex=True, na=False)
     s.loc[mask_both] = s.loc[mask_both].str.replace(".", "", regex=False)
+    # "1234,56" -> "1234.56"
     mask_only_comma = s.str.contains(",", na=False) & ~s.str.contains(r"\.", regex=True, na=False)
     s.loc[mask_only_comma] = s.loc[mask_only_comma].str.replace(",", ".", regex=False)
     return pd.to_numeric(s, errors="ignore")
@@ -82,7 +106,7 @@ def pick_year_col(df: pd.DataFrame) -> str | None:
     return None
 
 def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
-    """Genel çizim: AYISMI + (opsiyonel) YIL + tüm sayısal metrikler"""
+    """Genel çizim: AYISMI + (opsiyonel) YIL + tüm sayısal metrikler (aynı yıl+ay toplanır)."""
     if df is None or df.empty:
         return
 
@@ -114,7 +138,6 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
 
     numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
     metric_cols = [c for c in numeric_cols if c not in (year_col, "_AY_ORDER") and not is_year_like(c)]
-
     if not metric_cols:
         st.warning("Çizilecek sayısal metrik bulunamadı.")
         return
@@ -137,21 +160,30 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
     long_df["_AY_ORDER"] = long_df[month_col].map(MONTH_ORDER_IDX)
     long_df = long_df.sort_values(["Seri","_AY_ORDER"])
 
-    # 9) Çiz
-    x_enc = alt.X(f"{month_col}:N",
-                  title="Ay",
-                  scale=alt.Scale(domain=MONTH_ORDER))
+    # 9) Format: TR binlik . / ondalık , ; para metrikleri için ₺
+    is_integer_vals = (long_df["Değer"].dropna() % 1 == 0).all()
+    # Metrik adı para çağrışımı yapıyorsa (harcama/ciro/tutar/satış)
+    money_keywords = ["HARCAMA", "CİRO", "CIRO", "HASILAT", "REVENUE", "SATIŞ", "SATIS", "TUTAR"]
+    is_money = any(any(k in m.upper() for k in money_keywords) for m in metric_cols)
+    if is_money:
+        fmt = "$,.0f" if is_integer_vals else "$,.2f"  # currency yereli ₺ olarak ayarlı
+        y_title = "Tutar (₺)"
+    else:
+        fmt = ",.0f" if is_integer_vals else ",.2f"
+        y_title = "Değer"
 
+    # 10) Çiz
+    x_enc = alt.X(f"{month_col}:N", title="Ay", scale=alt.Scale(domain=MONTH_ORDER))
     chart = (
         alt.Chart(long_df)
         .mark_line(point=True, interpolate="monotone")
         .encode(
             x=x_enc,
-            y=alt.Y("Değer:Q", title="Değer"),
+            y=alt.Y("Değer:Q", title=y_title, axis=alt.Axis(format=fmt)),
             color=alt.Color("Seri:N", title="Seri"),
             detail="Seri:N",
             order=alt.Order("_AY_ORDER:Q"),
-            tooltip=[month_col, "Seri", "Değer"]
+            tooltip=[month_col, "Seri", alt.Tooltip("Değer:Q", title=y_title, format=fmt)],
         )
         .properties(height=360)
     )
