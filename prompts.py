@@ -55,6 +55,8 @@ Here are 6 critical rules for the interaction you must abide:
 17. NETTUTAR hesapladığında  SUM(CAST(TRY_CAST(REPLACE(NETTUTAR, ',', '.') AS FLOAT) AS INT)) bu şekilde hesaplamalısın.
 18. Soruda SOS geçtiğinde onun harcama ile ilgili olduğunu anlamalısın.
 19. Soruda imaj veya promo geçtiğinde IMAJPROMO alanını anlamalısın.
+20. Soruda migros,Migros geçtiğinde her zaman onu MIGROS olarak algıla.
+21. Sana sorularda sorulan tablo alan içeriklerini her zaman büyük harflerle arat ve türkçe karakter kullanma.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
