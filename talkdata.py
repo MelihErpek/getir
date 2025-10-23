@@ -72,50 +72,83 @@ def render_line_chart(df: pd.DataFrame):
     if df is None or df.empty:
         return
     df = df.copy()
-    value_col = None
-    year_col = None
-    # --- (1) Sayı parse aynen kalabilir ---
 
-    # --- (2) AYISMI normalizasyonu ve temizlik ---
-    month_order_tr = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN",
-                      "TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
+    # --- emniyet: başlangıç tanımları
+    value_col, year_col = None, None
 
+    # --- değer kolonunu otomatik bul (örnek: TOPLAM_GRP öncelik) ---
+    preferred = [c for c in df.columns if c.upper() in ("TOPLAM_GRP","TOPLAM_HARCAMA")]
+    if preferred:
+        value_col = preferred[0]
+    else:
+        cand = [c for c in df.columns
+                if pd.api.types.is_numeric_dtype(df[c])
+                and any(k in c.upper() for k in ["TOPLAM","HARCAMA","TUTAR","GRP"])]
+        if cand: value_col = cand[0]
+
+    # --- AY normalizasyonu ---
+    month_order = ["OCAK","ŞUBAT","MART","NİSAN","MAYIS","HAZİRAN",
+                   "TEMMUZ","AĞUSTOS","EYLÜL","EKİM","KASIM","ARALIK"]
     if "AYISMI" in df.columns:
-        # NaN'ları at, trim + TR upper
-        df = df[df["AYISMI"].notna()]
-        df["AYISMI"] = (
-            df["AYISMI"].astype(str).str.strip().str.upper()
-        )
-        # Sadece geçerli ay adlarını bırak
-        df = df[df["AYISMI"].isin(month_order_tr)]
+        df = df[df["AYISMI"].notna()].copy()
+        df["AYISMI"] = df["AYISMI"].astype(str).str.strip().str.upper()
+        df = df[df["AYISMI"].isin(month_order)].copy()
 
-    # --- hedef kolonları tespit ---
-    # (değer ve yıl kolonlarını bulma mantığınız aynen kalabilir)
+    # --- YIL kolonu var mı? (çoklu yıl senaryosu için) ---
+    if "YIL" in df.columns: year_col = "YIL"
+    elif "YEAR" in df.columns: year_col = "YEAR"
 
-    # ... value_col, year_col tespiti (sizin kodunuzdaki gibi) ...
+    # =========================
+    # 1) Çoklu yıl varsa
+    # =========================
+    if value_col and year_col and "AYISMI" in df.columns:
+        order_map = {m:i for i,m in enumerate(month_order, start=1)}
+        df[year_col] = df[year_col].astype(str)
+        # aynı yıl+ay birden fazla ise topla
+        grp = (df.groupby([year_col,"AYISMI"], as_index=False)[value_col].sum())
+        grp["_AY_ORDER"] = grp["AYISMI"].map(order_map)
 
-    if ("AYISMI" in df.columns) and value_col:
-        # Çoklu yıl varsa
-        if year_col:
-            df[year_col] = df[year_col].astype(str)
-            chart = (
-                alt.Chart(df)
-                .mark_line(point=True)
-                .encode(
-                    x=alt.X(
-                        "AYISMI:N",
-                        title="Ay",
-                        # kritik nokta: özel sıra DOMAIN olarak veriliyor
-                        scale=alt.Scale(domain=month_order_tr),
-                    ),
-                    y=alt.Y(f"{value_col}:Q", title=value_col.replace("_", " ")),
-                    color=alt.Color(f"{year_col}:N", title="Yıl"),
-                    tooltip=[year_col, "AYISMI", value_col],
-                )
-                .properties(height=360)
+        chart = (
+            alt.Chart(grp)
+            .mark_line(point=True, interpolate="monotone")
+            .encode(
+                x=alt.X("AYISMI:N", title="Ay", scale=alt.Scale(domain=month_order)),
+                y=alt.Y(f"{value_col}:Q", title=value_col.replace("_"," ")),
+                color=alt.Color(f"{year_col}:N", title="Yıl"),
+                order=alt.Order("_AY_ORDER:Q"),
+                tooltip=[year_col, "AYISMI", value_col]
             )
-            st.altair_chart(chart, use_container_width=True)
-            return
+            .properties(height=360)
+        )
+        st.altair_chart(chart, use_container_width=True)
+        return
+
+    # =========================
+    # 2) Tek seri (yıl yok) – sizin durumunuz
+    # =========================
+    if value_col and "AYISMI" in df.columns:
+        order_map = {m:i for i,m in enumerate(month_order, start=1)}
+        # Aynı ay birden çok satırsa topla (isterseniz mean de yapabilirsiniz)
+        agg = df.groupby("AYISMI", as_index=False)[value_col].sum()
+        agg["_AY_ORDER"] = agg["AYISMI"].map(order_map)
+        agg = agg.sort_values("_AY_ORDER")
+
+        chart = (
+            alt.Chart(agg)
+            .mark_line(point=True, interpolate="monotone")
+            .encode(
+                x=alt.X("AYISMI:N", title="Ay", scale=alt.Scale(domain=month_order)),
+                y=alt.Y(f"{value_col}:Q", title=value_col.replace("_"," ")),
+                order=alt.Order("_AY_ORDER:Q"),
+                tooltip=["AYISMI", value_col]
+            )
+            .properties(height=360)
+        )
+        st.altair_chart(chart, use_container_width=True)
+        return
+
+    # Diğer fallback'ler (TARIH vb.) burada kalabilir…
+
 
     # --- Fallback çizimi ---
     if "AYISMI" in df.columns:
