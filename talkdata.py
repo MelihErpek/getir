@@ -74,13 +74,19 @@ def smart_to_numeric(s: pd.Series) -> pd.Series:
     if pd.api.types.is_numeric_dtype(s):
         return s
     s = s.astype(str).str.strip()
-    # "1.234,56" -> "1234,56"
     mask_both = s.str.contains(",", na=False) & s.str.contains(r"\.", regex=True, na=False)
     s.loc[mask_both] = s.loc[mask_both].str.replace(".", "", regex=False)
-    # "1234,56" -> "1234.56"
     mask_only_comma = s.str.contains(",", na=False) & ~s.str.contains(r"\.", regex=True, na=False)
     s.loc[mask_only_comma] = s.loc[mask_only_comma].str.replace(",", ".", regex=False)
     return pd.to_numeric(s, errors="ignore")
+
+def to_datetime_tr(s: pd.Series) -> pd.Series:
+    """'01.11.2024', '1/11/2024', datetime gibi değerleri güvenle datetime'a çevirir."""
+    if pd.api.types.is_datetime64_any_dtype(s):
+        return s
+    s = s.astype(str).str.strip()
+    dt = pd.to_datetime(s, dayfirst=True, errors="coerce")
+    return dt
 
 def normalize_months(df: pd.DataFrame, month_col: str = "AYISMI") -> pd.DataFrame:
     """AYISMI'nı temizler, geçersizleri atar, sıralama için _AY_ORDER ekler."""
@@ -110,13 +116,11 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
     if df is None or df.empty:
         return
 
-    # 1) Sayıları normalize et
     df = df.copy()
     for c in df.columns:
         try: df[c] = smart_to_numeric(df[c])
         except Exception: pass
 
-    # 2) Ay kolonu temizliği
     if month_col not in df.columns:
         st.warning(f"Grafik için '{month_col}' kolonu yok.")
         return
@@ -125,12 +129,10 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
         st.warning("Geçerli ay satırı kalmadı.")
         return
 
-    # 3) Yıl (opsiyonel)
     year_col = pick_year_col(df)
     if year_col:
         df[year_col] = df[year_col].astype(str)
 
-    # 4) Çizilecek metrik kolonları (tüm sayısal kolonlar; yıl benzerleri hariç)
     def is_year_like(col: str) -> bool:
         if col.upper() in ("YIL","YEAR"): return True
         s = df[col].astype(str)
@@ -142,37 +144,30 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
         st.warning("Çizilecek sayısal metrik bulunamadı.")
         return
 
-    # 5) Aynı yıl+ay tekrarı varsa topla
     group_keys = [month_col] + ([year_col] if year_col else [])
     agg = df[group_keys + metric_cols].groupby(group_keys, as_index=False).sum(numeric_only=True)
 
-    # 6) Uzun forma erit
     long_df = agg.melt(id_vars=group_keys, value_vars=metric_cols,
                        var_name="Metric", value_name="Değer")
 
-    # 7) Seri adı: "Metric - Yıl" / "Metric"
     if year_col:
         long_df["Seri"] = long_df["Metric"].astype(str) + " - " + long_df[year_col].astype(str)
     else:
         long_df["Seri"] = long_df["Metric"].astype(str)
 
-    # 8) Çizim sırası
     long_df["_AY_ORDER"] = long_df[month_col].map(MONTH_ORDER_IDX)
     long_df = long_df.sort_values(["Seri","_AY_ORDER"])
 
-    # 9) Format: TR binlik . / ondalık , ; para metrikleri için ₺
     is_integer_vals = (long_df["Değer"].dropna() % 1 == 0).all()
-    # Metrik adı para çağrışımı yapıyorsa (harcama/ciro/tutar/satış)
     money_keywords = ["HARCAMA", "CİRO", "CIRO", "HASILAT", "REVENUE", "SATIŞ", "SATIS", "TUTAR"]
     is_money = any(any(k in m.upper() for k in money_keywords) for m in metric_cols)
     if is_money:
-        fmt = "$,.0f" if is_integer_vals else "$,.2f"  # currency yereli ₺ olarak ayarlı
+        fmt = "$,.0f" if is_integer_vals else "$,.2f"
         y_title = "Tutar (₺)"
     else:
         fmt = ",.0f" if is_integer_vals else ",.2f"
         y_title = "Değer"
 
-    # 10) Çiz
     x_enc = alt.X(f"{month_col}:N", title="Ay", scale=alt.Scale(domain=MONTH_ORDER))
     chart = (
         alt.Chart(long_df)
@@ -184,6 +179,62 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
             detail="Seri:N",
             order=alt.Order("_AY_ORDER:Q"),
             tooltip=[month_col, "Seri", alt.Tooltip("Değer:Q", title=y_title, format=fmt)],
+        )
+        .properties(height=360)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+def render_date_lines(df: pd.DataFrame, date_col: str = "TARIH"):
+    """Tarih bazlı (günlük/haftalık) tüm sayısal metrikleri çizer."""
+    if df is None or df.empty:
+        return
+
+    df = df.copy()
+    for c in df.columns:
+        try: df[c] = smart_to_numeric(df[c])
+        except Exception: pass
+
+    if date_col not in df.columns:
+        if "TARİH" in df.columns:
+            date_col = "TARİH"
+        else:
+            st.warning(f"Grafik için '{date_col}' kolonu yok.")
+            return
+
+    df[date_col] = to_datetime_tr(df[date_col])
+    df = df[df[date_col].notna()].copy()
+    if df.empty:
+        st.warning("Geçerli tarih satırı kalmadı.")
+        return
+
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    metric_cols = [c for c in numeric_cols if c not in (date_col,)]
+    if not metric_cols:
+        st.warning("Çizilecek sayısal metrik bulunamadı.")
+        return
+
+    agg = df[[date_col] + metric_cols].groupby(date_col, as_index=False).sum(numeric_only=True)
+
+    long_df = agg.melt(id_vars=[date_col], value_vars=metric_cols, var_name="Metric", value_name="Değer")
+
+    is_integer_vals = (long_df["Değer"].dropna() % 1 == 0).all()
+    money_keywords = ["HARCAMA", "CİRO", "CIRO", "HASILAT", "REVENUE", "SATIŞ", "SATIS", "TUTAR", "BÜTÇE", "BUTCE"]
+    is_money = any(any(k in m.upper() for k in money_keywords) for m in metric_cols)
+    if is_money:
+        fmt = "$,.0f" if is_integer_vals else "$,.2f"
+        y_title = "Tutar (₺)"
+    else:
+        fmt = ",.0f" if is_integer_vals else ",.2f"
+        y_title = "Değer"
+
+    chart = (
+        alt.Chart(long_df.sort_values(date_col))
+        .mark_line(point=True)
+        .encode(
+            x=alt.X(f"{date_col}:T", title="Tarih"),
+            y=alt.Y("Değer:Q", title=y_title, axis=alt.Axis(format=fmt)),
+            color=alt.Color("Metric:N", title="Metrik"),
+            tooltip=[alt.Tooltip(f"{date_col}:T", title="Tarih"), "Metric", alt.Tooltip("Değer:Q", title=y_title, format=fmt)],
         )
         .properties(height=360)
     )
@@ -230,7 +281,6 @@ for message in st.session_state.messages:
 if st.session_state.messages and st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar='UM_Logo_Heritage_Red.png'):
         with st.spinner("Model yanıt üretiyor..."):
-            # Mesajları API formatına çevir
             api_messages = []
             for m in st.session_state.messages:
                 role = m.get("role")
@@ -238,7 +288,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                 if role in ("system", "user", "assistant"):
                     api_messages.append({"role": role, "content": str(content or "")})
 
-            # OpenAI çağrısı
             result = client.chat.completions.create(
                 model="gpt-4.1",
                 messages=api_messages
@@ -246,10 +295,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
             response = result.choices[0].message.content or ""
             st.markdown(response)
 
-            # Asistan mesajını state'e eklemek için hazırla
             message = {"role": "assistant", "content": response, "avatar": 'UM_Logo_Heritage_Red.png'}
 
-            # Yanıttaki SQL'i al ve Snowflake'te çalıştır
             sql_match = re.search(r"```sql\s*(.+?)\s*```", response, re.DOTALL | re.IGNORECASE)
             if sql_match:
                 sql = sql_match.group(1).strip()
@@ -257,16 +304,29 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                     conn = st.connection("snowflake")
                     df = conn.query(sql)
 
-                    # Tabloyu ay sırasına göre sırala (varsa YIL da)
+                    # Tabloyu ay veya tarih sütununa göre sırala
+                    date_col = None
                     if "AYISMI" in df.columns:
                         df = normalize_months(df, "AYISMI")
                         sort_cols = (["YIL", "_AY_ORDER"] if "YIL" in df.columns else ["_AY_ORDER"])
                         df = df.sort_values(sort_cols).drop(columns=["_AY_ORDER"])
+                    elif "TARIH" in df.columns or "TARİH" in df.columns:
+                        date_col = "TARIH" if "TARIH" in df.columns else "TARİH"
+                        df[date_col] = to_datetime_tr(df[date_col])
+                        df = df.sort_values(date_col)
+                        try:
+                            df[date_col] = df[date_col].dt.strftime("%d.%m.%Y")
+                        except Exception:
+                            pass
+
                     message["results"] = df
                     st.dataframe(df)
 
-                    # Grafik (genel)
-                    render_monthly_lines(df, month_col="AYISMI")
+                    # Grafik: varsa tarih bazlı, yoksa aylık
+                    if date_col:
+                        render_date_lines(df.copy(), date_col=date_col)
+                    else:
+                        render_monthly_lines(df.copy(), month_col="AYISMI")
 
                 except Exception as e:
                     st.error(f"SQL çalıştırma hatası: {e}")
