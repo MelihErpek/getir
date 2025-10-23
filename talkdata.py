@@ -72,7 +72,7 @@ def render_line_chart(df: pd.DataFrame):
     if df is None or df.empty:
         return
     df = df.copy()
-   value_col = None
+    value_col = None
     year_col = None
     # --- (1) Sayı parse aynen kalabilir ---
 
