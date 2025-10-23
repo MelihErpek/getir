@@ -88,17 +88,32 @@ def to_datetime_tr(s: pd.Series) -> pd.Series:
     dt = pd.to_datetime(s, dayfirst=True, errors="coerce")
     return dt
 
+def tr_upper(s: pd.Series) -> pd.Series:
+    # Türkçe karakterleri büyütmeye uygun dönüştürme
+    return (
+        s.astype(str)
+         .str.replace("i", "İ")
+         .str.replace("ı", "I")
+         .str.replace("ğ", "Ğ")
+         .str.replace("ü", "Ü")
+         .str.replace("ş", "Ş")
+         .str.replace("ö", "Ö")
+         .str.replace("ç", "Ç")
+         .str.upper()
+    )
+
 def normalize_months(df: pd.DataFrame, month_col: str = "AYISMI") -> pd.DataFrame:
-    """AYISMI'nı temizler, geçersizleri atar, sıralama için _AY_ORDER ekler."""
     if month_col not in df.columns:
         return df
     df = df[df[month_col].notna()].copy()
-    df[month_col] = df[month_col].astype(str).str.strip().str.upper()
+    df[month_col] = tr_upper(df[month_col]).str.strip()
+    # İsterseniz "NISAN" gibi düz veriler de gelsin diye alternatif eşlemeler eklenebilir
     df = df[df[month_col].isin(MONTH_ORDER)].copy()
     if df.empty:
         return df
     df["_AY_ORDER"] = df[month_col].map(MONTH_ORDER_IDX)
     return df
+
 
 def pick_year_col(df: pd.DataFrame) -> str | None:
     """YIL/YEAR veya 4 haneli yıl benzeri bir kolonu seç."""
