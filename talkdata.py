@@ -176,7 +176,7 @@ def render_monthly_lines(df: pd.DataFrame, month_col: str = "AYISMI"):
     x_enc = alt.X(f"{month_col}:N", title="Ay", scale=alt.Scale(domain=MONTH_ORDER))
     chart = (
         alt.Chart(long_df)
-        .mark_line(point=True, interpolate="monotone")
+        .mark_line(point=True, interpolate="linear")
         .encode(
             x=x_enc,
             y=alt.Y("Değer:Q", title=y_title, axis=alt.Axis(format=fmt)),
