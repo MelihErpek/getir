@@ -289,7 +289,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] != "assis
                     api_messages.append({"role": role, "content": str(content or "")})
 
             result = client.chat.completions.create(
-                model="gpt-4.1",
+                model="gpt-5",
                 messages=api_messages
             )
             response = result.choices[0].message.content or ""
