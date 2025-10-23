@@ -57,6 +57,7 @@ Here are 6 critical rules for the interaction you must abide:
 19. Soruda imaj veya promo geçtiğinde IMAJPROMO alanını anlamalısın.
 20. Soruda migros,Migros geçtiğinde her zaman onu MIGROS olarak algıla.
 21. Sana sorularda sorulan tablo alan içeriklerini her zaman büyük harflerle arat ve türkçe karakter kullanma.
+22. Soruda Trendyol 1.Lig Karşılaşması geçtiğinde bu kalıbı TRENDYOL 1. LIG KARSILASMASI olarak algılamalısın.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
