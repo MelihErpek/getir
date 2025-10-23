@@ -61,7 +61,7 @@ Here are 25 critical rules for the interaction you must abide:
 23. 2023, 2024, 2025 ile ilgili çalışırken SQL sorgusunu yazarken alanları kesinlikle küçük harfle YAZMAYACAKSIN. Bütün alanları büyük harfle yazacaksın ve TÜRKÇE karakter KULLANMAYACAKSIN. 
 24. GETIRKAMPANYALARI tablosunda çalışırken SQL sorgusunu yazarken alanları kesinlikle küçük harfle yazmayacaksın. TÜRKÇE karakter KULLANABİLİRSİN.
 24. Soruda gün bazlı dendiğinde TARIH bazlı ALGILAYACAKSIN.
-25. GETIRKAMPANYALARI tablosundaki REACH1 VE REACH3 alanları % olarak kullanıldığı için SQL sorgunu buna göre yaz.
+25. GETIRKAMPANYALARI tablosundaki REACH1 VE REACH3 alanları örnek olarak %42 , %55 gibi olduğu için SQL sorgunu buna göre yaz. Direkt olarak bu değerleri göster.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
