@@ -67,6 +67,7 @@ Here are  critical rules for the interaction you must abide:
     migros sanal market -> MIGROS SANAL MARKET
     getir 10 -> GETİR10
     Getir Yemek -> GETİRYEMEK
+30. SQL sorgularında NOT ILIKE KULLANMAYACAKSIN.
 </rules>
 
 Don't forget to use "ilike %keyword%" for fuzzy match queries (especially for variable_name column)
