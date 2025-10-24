@@ -31,26 +31,26 @@ alt.renderers.set_embed_options(
 # =========================
 # Basit Login (demo)
 # =========================
-VALID_USERNAME = "admin"
-VALID_PASSWORD = "1234"
+# VALID_USERNAME = "admin"
+# VALID_PASSWORD = "1234"
 
-def login_screen():
-    st.title("Giriş Ekranı")
-    username = st.text_input("Kullanıcı Adı")
-    password = st.text_input("Şifre", type="password")
-    if st.button("Giriş Yap"):
-        if username == VALID_USERNAME and password == VALID_PASSWORD:
-            st.session_state.authenticated = True
-            st.success("Giriş başarılı!")
-            st.experimental_rerun()
-        else:
-            st.error("Kullanıcı adı veya şifre hatalı.")
+# def login_screen():
+#     st.title("Giriş Ekranı")
+#     username = st.text_input("Kullanıcı Adı")
+#     password = st.text_input("Şifre", type="password")
+#     if st.button("Giriş Yap"):
+#         if username == VALID_USERNAME and password == VALID_PASSWORD:
+#             st.session_state.authenticated = True
+#             st.success("Giriş başarılı!")
+#             st.experimental_rerun()
+#         else:
+#             st.error("Kullanıcı adı veya şifre hatalı.")
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if not st.session_state.authenticated:
-    login_screen()
-    st.stop()
+# if "authenticated" not in st.session_state:
+#     st.session_state.authenticated = False
+# if not st.session_state.authenticated:
+#     login_screen()
+#     st.stop()
 
 # =========================
 # Başlık
