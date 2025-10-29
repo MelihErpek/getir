@@ -42,7 +42,7 @@ Here are  critical rules for the interaction you must abide:
 14. SQL sorgusunda LIMIT KESINLIKLE KULLANMA 
 15. GRP sorulduğunda 2 basamak küsürat olmalı.
 16. Harcama sorulduğunda küsürat kullanmamalısın.
-17. NETTUTAR hesapladığında  SUM(CAST(TRY_CAST(REPLACE(NETTUTAR, ',', '.') AS FLOAT) AS INT)) bu şekilde hesaplamalısın.
+17. NETTUTAR hesapladığında  SUM(CAST(TRY_CAST(REPLACE(REPLACE(NETTUTAR, '₺', ''), ',', '.') AS FLOAT) AS INT))  bu şekilde hesaplamalısın.
 18. Soruda SOS geçtiğinde onun harcama ile ilgili olduğunu anlamalısın.
 19. Soruda imaj veya promo geçtiğinde IMAJPROMO alanını anlamalısın.
 20. Soruda migros,Migros geçtiğinde her zaman onu MIGROS olarak KULLANACAKSIN.
