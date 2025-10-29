@@ -20,6 +20,61 @@ The user will ask questions, for each question you should respond and include a 
 
 Here are  critical rules for the interaction you must abide:
 <rules>
+Sana rekabet dataları tablolarının içeriklerini aşağıda veriyorum.
+
+<fieldContext>
+KATEGORI : Bu alan verinin genel kategori bilgisini belirtir. Örnek değerler: MARKETGENEL, GETIRYEMEK, GETIR10, GETIRBUYUK, GETIRMORE.
+KATEGORIDETAY : Bu alan kategori alt sınıflandırmasını içerir. Örnek değerler: MARKET, GETIRYEMEK, GENEL, GETIR10, REKABET.
+AYISMI : Bu alan verinin ait olduğu ayın adını gösterir. Örnek değerler: OCAK, SUBAT, MART, NISAN, MAYIS.
+TARIH : Bu alan tarih bilgisini içerir. Örnek değerler: 2024-08-01, 2024-08-02, 2024-08-03, 2024-08-04, 2024-08-05.
+HAFTA : Bu alan verinin ait olduğu haftayı belirtir. Örnek değerler: 31, 32, 33, 34, 35.
+GUN : Haftanın gününü belirtir. Örnek değerler: PAZARTESI, SALI, CARSAMBA, PERSEMBE, CUMA.
+YIL : Bu alan yıl bilgisini belirtir. Örnek değerler: 2023, 2024, 2025, 2022, 2021.
+BASLANGIC : Kampanyanın veya yayının başlangıç saatini belirtir. 
+SAATDILIMI : Yayının gerçekleştiği saati belirtir. Örnek değerler: 1,2,3,4,5.
+DAYPART : Gün içindeki yayın zaman dilimini gösterir. Örnek değerler: PT, OPT, ODT,LDT,EDT.
+MECRA : Reklamın yayınlandığı mecra bilgisini belirtir. Örnek değerler: TELEVIZYON, BASIN, RADYO, DIJITAL, OUTDOOR.
+ANAYAYIN : Reklamın yayınlandığı ana yayın veya kanal adını belirtir. Örnek değerler: SHOW TV, KANAL D, SKYROAD, FLYPGS.COM MAGAZINE, CNN TURK.
+ANAMARKA : Bu alan verinin bağlı olduğu ana markayı belirtir. Örnek değerler: GETIR, MIGROS, TRENDYOL, YEMEKSEPETI, A101.
+MARKA : Reklamı veren markayı belirtir. Örnek değerler: GETIR, GETIRYEMEK, GETIR10, MIGROS, TRENDYOLCOM.
+VERSIYON : Reklamın veya içeriğin versiyon bilgisini belirtir. Örnek değerler:REVIZE-ONCE BIM'E SONRA OKULA (16 SN),G10 COCA COLA 15" KUŞAK SPOT .
+SPOTTIPI : Reklam spotunun türünü belirtir. Örnek değerler: KUSAK SPOT, ALT BANT.
+SPOTTIPID : Spot tipinin detay açıklamasını içerir. Örnek değerler: KUSAK SPOT, ALT BANT.
+SPOTKONUMU : Spotun yayınlandığı konumu belirtir. Örnek değerler: ILK REKLAM , IKINCI REKLAM , ALT BANT , ORTADA.
+KAMPANYA : Kampanya adını belirtir. Örnek değerler: GETIR YAZ, MIGROS EYLUL, TRENDYOL INDIRIM, YEMEKSEPETI MARKET, TANIMLANMAMIS.
+REKLAMSLOGANI : Reklamda kullanılan sloganı belirtir. Örnek değerler: GETIR GETIRSIN, HIZLI TESLIMAT, DAHA AZA DAHA COK, ALISVERISIN EN KOLAY YOLU, YEMEK GETIR.
+ANASEKTOR : Verinin bağlı olduğu ana sektörü belirtir. Örnek değerler: PERAKENDE, GIDA, TEKNOLOJI, BANKACILIK, ULASIM.
+SEKTOR : Alt sektör bilgisini belirtir. Örnek değerler: ZINCIR MARKET, RESTORAN, E-TICARET, TELEKOM, FINANS.
+REKLAMINFIRMASI : Reklamı yayınlayan veya üreten firmayı belirtir. Örnek değerler: YENI MAGAZACILIK A.S., GETIR PERAKENDE, MIGROS TIC. A.S., TRENDYOL, YEMEKSEPETI.
+URUNTURU : Reklamı yapılan ürün veya hizmet türünü belirtir. Örnek değerler: MARKET, YEMEK, ULASIM, SUPERMARKET, TEKNOLOJI.
+PROGRAM : Reklamın yayınlandığı program adını belirtir. Örnek değerler: ANA HABER, MAGAZIN D, YEMEKTEYIZ, HABER TURK, !BASIN.
+TPGRUP : Yayın veya medya grubunu belirtir. Örnek değerler: CIZGI FILMLER,DINI PROGRAMLAR.
+UNITE : Yayının veya reklamın ait olduğu birimi gösterir. Örnek değerler: CLP , DIJITAL EKRAN , GIANTBOARD , DUVAR.
+UNITEDETAY : Yayın biriminin alt detay bilgisini belirtir. Örnek değerler: CLP , DIJITAL EKRAN , GIANTBOARD , DUVAR.
+ILI : Reklamın veya kampanyanın yayınlandığı ili belirtir. Örnek değerler: ISTANBUL, ANKARA, IZMIR, BURSA, ANTALYA.
+BOLGE : Kampanyanın yayınlandığı bölge bilgisini belirtir. Örnek değerler: MARMARA, EGE, IC ANADOLU, AKDENIZ, KARADENIZ.
+URUNHIZMET : Reklamı yapılan ürün veya hizmet adını belirtir. Örnek değerler: GETIR YEMEK, GETIR 10, GETIR BUYUK, MIGROS, YEMEKSEPETI.
+SURE : Reklamın süresini saniye cinsinden belirtir. Örnek değerler: 15, 20, 30, 45, 60.
+GRP : Reklamın toplam GRP (Gross Rating Point) değerini belirtir. Örnek değerler: 0.0, 2.5, 3.8, 4.2, 1.0.
+GRP1544ABC1 : 15–44 yaş ABC1 hedef kitlesine ait GRP değerini belirtir. Örnek değerler: 0.0, 3.0, 4.1, 2.2, 1.3.
+FREKANS : Yayının frekansını veya tekrar sayısını belirtir. Örnek değerler: 1, 2, 3, 4, 5.
+TABLOIDSYF : Basılı yayınlarda sayfa bilgisini belirtir. Örnek değerler: 1, 2, 3, 4, 5.
+TABLOIDCM : Basılı yayınlarda kullanılan alanın santimetre cinsinden boyutunu gösterir. Örnek değerler: 50, 100, 200, 400, 800.
+GUNSAYISI : Kampanyanın toplam sürdüğü gün sayısını belirtir. Örnek değerler: 3, 5, 7, 10, 14.
+ADET : Reklamın toplam gösterim veya yayın adedini belirtir. Örnek değerler: 1, 2, 3, 4, 5.
+GRPXSURE20ABC1 : GRP ile reklam süresinin çarpımını gösterir. Örnek değerler: 0.0, 10.5, 12.2, 8.9, 4.6.
+GRP3020ABC1 : 30 saniyelik reklamlar için hesaplanmış GRP değerini belirtir. Örnek değerler: 0.0, 3.2, 2.9, 4.1, 5.0.
+IMAJPROMO : Reklamın imaj veya promosyon türünü belirtir. Örnek değerler: IMAJ, PROMO, RADYO ,DIGER MECRA.
+MECRADETAY : Yayın mecrasının alt detay bilgisini belirtir. Örnek değerler: DERGI, GAZETE, TV, DIJITAL, RADYO.
+FSPOTTIPI : Spotun farklı versiyon türünü belirtir. Örnek değerler: KUSAK SPOT, ANA SPOT, SPONSORLUK, DIGER, PROGRAM ICI.
+BRFIYAT : Reklamın brüt fiyat bilgisini belirtir. Örnek değerler: 1000.00, 2500.50, 5000.00, 7500.75, 10082.28.
+NETTUTAR : Reklamın veya kampanyanın net harcama tutarını belirtir. Örnek değerler: 1000.00, 2500.50, 5000.00, 7500.75, 10082.28.
+PARTNER : İş ortaklığı veya kampanya partneri bilgisini belirtir. Örnek değerler: GETIR, MIGROS, TRENDYOL, YEMEKSEPETI, DIGER.
+TEMATIKKANALTURU : Yayının tematik kanal türünü belirtir. Örnek değerler: HABER, EGLENCE, SPOR, YASAM, DIGER.
+KAMPANYADETAY : Kampanyanın detay açıklamasını içerir. Örnek değerler: GETIR YAZ KAMPANYASI, MIGROS EYLUL, TRENDYOL INDIRIM, YEMEKSEPETI MAHALLE, DIGER.
+</fieldContext>
+
+
 1. You MUST MUST wrap the generated sql code within ``` sql code markdown in this format e.g
 ```sql
 (select 1) union (select 2)
