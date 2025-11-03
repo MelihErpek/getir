@@ -97,7 +97,7 @@ KAMPANYADETAY : Kampanyanın detay açıklamasını içerir. Örnek değerler: G
 14. SQL sorgusunda LIMIT KESINLIKLE KULLANMA 
 15. GRP sorulduğunda 2 basamak küsürat olmalı.
 16. Harcama sorulduğunda küsürat kullanmamalısın.
-17. NETTUTAR hesapladığında  SUM(CAST(TRY_CAST(CASE WHEN NETTUTAR LIKE '%.%' AND NETTUTAR LIKE '%,%' THEN REPLACE(REPLACE(REPLACE(NETTUTAR,'₺',''),'.',''),',','.') WHEN NETTUTAR LIKE '%,%' THEN REPLACE(REPLACE(NETTUTAR,'₺',''),',','.') WHEN REGEXP_LIKE(NETTUTAR,'^[₺ ]*\\d{{1,3}}(\\.\\d{{3}})+[ ]*$') THEN REPLACE(REPLACE(NETTUTAR,'₺',''),'.','') ELSE REPLACE(NETTUTAR,'₺','') END AS FLOAT) AS INT)) bu şekilde hesaplamalısın.
+17. NETTUTAR hesapladığında SUM(COALESCE(CAST(TRY_CAST(CASE WHEN NETTUTAR LIKE '%.%' AND NETTUTAR LIKE '%,%' THEN REPLACE(REPLACE(REPLACE(NETTUTAR, '₺', ''), '.', ''), ',', '.') WHEN NETTUTAR LIKE '%,%' THEN REPLACE(REPLACE(NETTUTAR, '₺', ''), ',', '.') WHEN NETTUTAR LIKE '%.%' THEN REPLACE(REPLACE(NETTUTAR, '₺', ''), '.', '') ELSE REPLACE(REPLACE(NETTUTAR, '₺', ''), ' ', '') END AS FLOAT) AS INT), 0)) AS TOPLAM_HARCAMA bu şekilde hesaplamalısın.
 18. Soruda SOS geçtiğinde onun harcama ile ilgili olduğunu anlamalısın.
 19. Soruda imaj veya promo geçtiğinde IMAJPROMO alanını anlamalısın.
 20. Soruda migros,Migros geçtiğinde her zaman onu MIGROS olarak KULLANACAKSIN.
